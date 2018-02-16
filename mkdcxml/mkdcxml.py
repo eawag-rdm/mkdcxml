@@ -36,14 +36,15 @@ The node does not have text or attributes.
 
 '''
 
-
+import pkg_resources
 import json
 from lxml import etree as ET
 from lxml.builder import ElementMaker
 
-E = ElementMaker(nsmap={None: "http://datacite.org/schema/kernel-4"}) 
-
 class MetaDataWriter:
+
+    E = ElementMaker(nsmap={None: "http://datacite.org/schema/kernel-4"})
+    
     def __init__(self, metafile, typ='datacite4.1'):
         self.typ = typ
         self.schema = self._mk_schema(self.typ)
@@ -60,10 +61,10 @@ class MetaDataWriter:
         if not valid:
             print(self.schema.error_log)
         
-    def _readmeta(self, filename):
-        'Reads metadata from (json) file'
-        with open(filename, 'r') as f:
-            return json.load(f)
+    def _readmeta(self, f):
+        'Reads metadata from (json) file(stream)'
+        # with open(filename, 'r') as f:
+        return json.load(f)
 
     def writexml(self, filename=None):
         'Writes the final XML'
@@ -100,8 +101,9 @@ class MetaDataWriter:
 
     def _mk_schema(self, typ):
         if typ == 'datacite4.1':
+            schemadef = pkg_resources.resource_stream(__name__, 'schema/datacite/metadata_schema_4.1.xsd')
             return ET.XMLSchema(
-                ET.parse('schema/datacite/metadata_schema_4.1.xsd')
+                ET.parse(schemadef)
             )
     
     def _build_tree(self, d=None):
@@ -141,11 +143,6 @@ class MetaDataWriter:
             for child in children:
                 el.append(self._build_tree(d=child))
             return el
-
-if __name__ == "__main__":
-    dmw = MetaDataWriter('metadata/snsf_dmp_guide.json')
-    dmw.writexml('output/datacite/snsf_dmp_guide.xml')
-
 
 
 

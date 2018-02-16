@@ -1,0 +1,4 @@
+from mkdcxml import MetaDataWriter
+
+dmw = MetaDataWriter('../tests/metadata/snsf_dmp_guide.json')
+dmw.writexml('../tests/output/snsf_dmp_guide.xml')
