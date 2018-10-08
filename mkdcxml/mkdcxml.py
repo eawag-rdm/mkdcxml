@@ -37,15 +37,18 @@ The node does not have text or attributes.
 '''
 
 import pkg_resources
+import sys
 import json
+from docopt import docopt
 from lxml import etree as ET
 from lxml.builder import ElementMaker
 
 class MetaDataWriter:
 
-    E = ElementMaker(nsmap={None: "http://datacite.org/schema/kernel-4"})
+    
     
     def __init__(self, metafile, typ='datacite4.1'):
+        self.E = ElementMaker(nsmap={None: "http://datacite.org/schema/kernel-4"})
         self.typ = typ
         self.schema = self._mk_schema(self.typ)
         self.attribute_defaults = self._mk_attribute_defaults(self.typ)
@@ -61,10 +64,10 @@ class MetaDataWriter:
         if not valid:
             print(self.schema.error_log)
         
-    def _readmeta(self, f):
+    def _readmeta(self, filename):
         'Reads metadata from (json) file(stream)'
-        # with open(filename, 'r') as f:
-        return json.load(f)
+        with open(filename, 'r') as f:
+            return json.load(f)
 
     def writexml(self, filename=None):
         'Writes the final XML'
@@ -115,14 +118,14 @@ class MetaDataWriter:
         default_att = self.attribute_defaults.get(k)
         if isinstance(v, str):
             # simple element
-            el = E(k)
+            el = self.E(k)
             el.text = v
             if default_att:
                 el.attrib.update(default_att)
             return el
         if isinstance(v, list):
             # element containing sequence of child elements / no attributes
-            el = E(k)
+            el = self.E(k)
             for child in v:
                 el.append(self._build_tree(d=child))
             if default_att:
@@ -130,7 +133,7 @@ class MetaDataWriter:
             return el
         if isinstance(v, dict):
             # element with attribute(s)
-            el = E(k)
+            el = self.E(k)
             att = v.get('att') 
             if att:
                 att = {self.attribute_map.get(k) or k: v for k, v in att.items()}
@@ -144,5 +147,25 @@ class MetaDataWriter:
                 el.append(self._build_tree(d=child))
             return el
 
+def main():
+    doc = """mkdcxml
+    Usage: mkdcxml [-o <outfile>] <metadatafile>
+    
+    Options:
+      -o, --outfile <outfile>    output file
+
+    Arguments:
+      <metadatafile>    The metadata in json format.
+    
+    """
+    args = docopt(doc, argv=sys.argv[1:], help=True)
+    mdw = MetaDataWriter(args['<metadatafile>'])
+    outfile = args['--outfile']
+    mdw.writexml(outfile)
+
+if __name__ == "__main__":
+    main()
 
 
+    
+    
