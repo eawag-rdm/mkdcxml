@@ -305,16 +305,18 @@ class CKANExtract:
         #
         # We do not use the posibility to have multiple geoLocations,
         # because we can't distinguish them in CKAN metadata.
-        geo_location = {}
+        geo_location = []
         geonames = self.ckanmeta.get('geographic_name')
-        for n in geonames:
-            geo_location.update({'geoLocationPlace': n})
+        for nam in geonames:
+            geo_location.append({'geoLocationPlace': nam})
             
         spatial = json.loads(self.ckanmeta['spatial'])
         if spatial['type'] == 'Point':
-            coordinates = '{} {}'.format(spatial['coordinates'][1],
-                                         spatial['coordinates'][0])
-            geo_location.update({'geoLocationPoint': coordinates})
+            lon = spatial['coordinates'][0]
+            lat = spatial['coordinates'][1]
+            geo_location.append({'geoLocationPoint': [
+                {'pointLongitude': str(lon)}, {'pointLatitude': str(lat)}
+                ]})
         if geo_location:
             geoLocations = {'geoLocations': [{'geoLocation': geo_location}]}
         self.output['resource'].append(geoLocations)
