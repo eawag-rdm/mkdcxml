@@ -23,9 +23,9 @@ The value of a node-object can be a (1) string, (2) an array or (3) an object.
 does not have attributes or children.
 
 (2) In case it is an array, the array contains node-objects of the node's children.
-The node does not have text or attributes.
+The node does not have neither text nor attributes.
 
-(3) In case it is an object, it might contain keys "val", "att", "children".
+(3) In case it is an object, it might contain keys "val", "att", "children", "tail"
 
   + The value of "val" is a string and equals the XML node's text.
   + The value of "att" is an object and corresponds the the node's attributes.
@@ -33,6 +33,8 @@ The node does not have text or attributes.
     http://www.jclark.com/xml/xmlns.htm.
   + The value of "children" is an array that contains node-objects of the node's
     children.
+  + The value of "tail" is text that is directly inserted after the element.
+    This serves to enable "mixed contenet" (see https://lxml.de/tutorial.html#elements-contain-text).
 
 '''
 
@@ -142,6 +144,8 @@ class MetaDataWriter:
                 el.attrib.update(default_att)
             if v.get('val'):
                 el.text =  v.get('val')
+            if v.get('tail'):
+                el.tail = v.get('tail')
             children = v.get('children', [])
             for child in children:
                 el.append(self._build_tree(d=child))
@@ -165,7 +169,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-    
-    

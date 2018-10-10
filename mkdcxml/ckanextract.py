@@ -285,15 +285,25 @@ class CKANExtract:
              ]
             })
 
+    def _description_parse(self, desc):
+        # creates a list of br-elements (<children>) with appropriate tails
+        # and a string <text>, representing the text-value of the parent.
+        
+        texts = desc.split('\r\n')
+        text = texts.pop(0)
+        children = [{'br': {'val': '', 'tail': t}} for t in texts]
+        return (text, children)
+
     def xs_descriptions(self):
         # We only consider descriptionType "Abstract"
         abstract = self.ckanmeta['notes']
-        abstract = re.sub(r'\s*\r\n', '<b>', abstract)
+        text, children = self._description_parse(abstract)
         descriptions = {'descriptions': [
-            {'description': {'val': abstract,
+            {'description': {'val': text,
                              'att': {'descriptionType': 'Abstract',
-                                     'lang': 'en'}
-                             }}]}
+                                     'lang': 'en'},
+                             'children': children}}
+            ]}
         self.output['resource'].append(descriptions)
 
     def xs_geolocations(self):
