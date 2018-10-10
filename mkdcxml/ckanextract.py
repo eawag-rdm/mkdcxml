@@ -11,7 +11,7 @@
 '''ckanextract
 
 Usage:
-  ckanextract <doi> <package_name>
+  ckanextract <doi> <package_name> <outputfile>
   ckanextract -h
 
 Options:
@@ -20,6 +20,7 @@ Options:
 Arguments:
   <doi>          DOI in the form "10.25678/000011"
   <package_name> The CKAN package name
+  <outputfile>   The file to which the intermediate json is written
 
 This module reads the metadata from a CKAN data package
 and generates json that in turn can be fed to mkdcxml.py in
@@ -73,11 +74,12 @@ class CKANExtract:
         ]
 
         
-    def __init__(self, pkgname, doi):
+    def __init__(self, pkgname, doi, outfile):
         self.pkgname = pkgname
         self.ckanmeta = self.get_ckanmeta(pkgname)
         self.doi = doi
         self.output = {'resource': []}
+        self.outfile = outfile
         
     def get_ckanmeta(self, pkgname):
         with ckanapi.RemoteCKAN(CKANHOST, apikey=CKANAPIKEY) as conn:
@@ -145,7 +147,7 @@ class CKANExtract:
         self.output['resource'].append(
             {"titles":
              [
-	         {"title": {"val": title, "att": {"xml:lang": "en"}}}
+	         {"title": {"val": title, "att": {"lang": "en"}}}
              ]}
         )
         
@@ -158,7 +160,7 @@ class CKANExtract:
         # We assume publication happened in the same year as metadata was created.
         pubyear = self._date_from_iso(self.ckanmeta['metadata_created']).year
         self.output['resource'].append(
-            {'publicationYear': pubyear}
+            {'publicationYear': str(pubyear)}
         )
         
     def xs_resourceType(self):
@@ -193,7 +195,7 @@ class CKANExtract:
         keywords = generic + taxa + substances + systems + tags
         keywords = [k for k in keywords if k not in ['none']]
         subjects = [
-            {"subject": {"val": k, "att": {"xml:lang": "en"}}} for k in keywords]
+            {"subject": {"val": k, "att": {"lang": "en"}}} for k in keywords]
         self.output['resource'].append({'subjects': subjects})
         
     def xs_contributors(self):
@@ -279,7 +281,7 @@ class CKANExtract:
                              'att': {'rightsURI':
                                      'https://creativecommons.org/publicdomain'
                                      '/zero/1.0/',
-                                     'xml:lang': 'en'}}}
+                                     'lang': 'en'}}}
              ]
             })
 
@@ -290,7 +292,7 @@ class CKANExtract:
         descriptions = {'descriptions': [
             {'description': {'val': abstract,
                              'att': {'descriptionType': 'Abstract',
-                                     'xml:lang': 'en'}
+                                     'lang': 'en'}
                              }}]}
         self.output['resource'].append(descriptions)
 
@@ -325,10 +327,11 @@ class CKANExtract:
         funcnames = ['xs_{}'.format(e[1]) for e in self.elements()]
         for f in funcnames:
             getattr(self, f)()
-        pprint(self.output)
+        with open(self.outfile, 'w') as f_out:
+            json.dump(self.output, f_out)
 
 if __name__ == '__main__':
     args = docopt(__doc__, argv=sys.argv[1:])
     print(args)
-    C = CKANExtract(args['<package_name>'], args['<doi>'])
+    C = CKANExtract(args['<package_name>'], args['<doi>'], args['<outputfile>'])
     C.main()
