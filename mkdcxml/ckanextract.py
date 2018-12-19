@@ -42,8 +42,9 @@ from pprint import pprint
 from datetime import datetime
 from docopt import docopt
 
-CKANHOST = 'https://eaw-ckan-dev1.eawag.wroot.emp-eaw.ch'
-CKANAPIKEY = os.environ['CKAN_APIKEY']
+#CKANHOST = 'https://eaw-ckan-dev1.eawag.wroot.emp-eaw.ch'
+CKANHOST = 'https://data.eawag.ch'
+CKANAPIKEY = os.environ['CKAN_APIKEY_PROD1']
 PUBLISHER = 'Eawag: Swiss Federal Institute of Aquatic Science and Technology'
 DEFAULT_AFFILIATION = 'Eawag: Swiss Federal Institute of Aquatic Science and Technology'
 
@@ -315,12 +316,15 @@ class CKANExtract:
         #
         # We do not use the posibility to have multiple geoLocations,
         # because we can't distinguish them in CKAN metadata.
+        spatial = json.loads(self.ckanmeta.get('spatial'))
+        if not spatial:
+            return
         geo_location = []
         geonames = self.ckanmeta.get('geographic_name')
         for nam in geonames:
             geo_location.append({'geoLocationPlace': nam})
             
-        spatial = json.loads(self.ckanmeta['spatial'])
+        
         if spatial['type'] == 'Point':
             lon = spatial['coordinates'][0]
             lat = spatial['coordinates'][1]
