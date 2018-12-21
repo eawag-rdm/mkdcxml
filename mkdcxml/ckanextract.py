@@ -11,11 +11,12 @@
 '''ckanextract
 
 Usage:
-  ckanextract <doi> <package_name> <outputfile>
+  ckanextract [-s <hosturl>] <doi> <package_name> <outputfile>
   ckanextract -h
 
 Options:
-  --help, -h  Show this screen
+  --server, -s <hosturl>   The url of the CKAN instance. [default: https://data.eawag.ch] 
+  --help, -h               Show this screen
 
 Arguments:
   <doi>          DOI in the form "10.25678/000011"
@@ -42,8 +43,6 @@ from pprint import pprint
 from datetime import datetime
 from docopt import docopt
 
-#CKANHOST = 'https://eaw-ckan-dev1.eawag.wroot.emp-eaw.ch'
-CKANHOST = 'https://data.eawag.ch'
 CKANAPIKEY = os.environ['CKAN_APIKEY_PROD1']
 PUBLISHER = 'Eawag: Swiss Federal Institute of Aquatic Science and Technology'
 DEFAULT_AFFILIATION = 'Eawag: Swiss Federal Institute of Aquatic Science and Technology'
@@ -75,15 +74,16 @@ class CKANExtract:
         ]
 
         
-    def __init__(self, pkgname, doi, outfile):
+    def __init__(self, pkgname, doi, outfile, server):
         self.pkgname = pkgname
         self.ckanmeta = self.get_ckanmeta(pkgname)
         self.doi = doi
         self.output = {'resource': []}
         self.outfile = outfile
+        self.server = server
         
     def get_ckanmeta(self, pkgname):
-        with ckanapi.RemoteCKAN(CKANHOST, apikey=CKANAPIKEY) as conn:
+        with ckanapi.RemoteCKAN(self.server, apikey=CKANAPIKEY) as conn:
             meta = conn.call_action('package_show', {'id': pkgname})
             return meta
 
@@ -349,5 +349,6 @@ class CKANExtract:
 if __name__ == '__main__':
     args = docopt(__doc__, argv=sys.argv[1:])
     print(args)
-    C = CKANExtract(args['<package_name>'], args['<doi>'], args['<outputfile>'])
+    C = CKANExtract(args['<package_name>'], args['<doi>'],
+                    args['<outputfile>'], args['--server'])
     C.main()
