@@ -76,11 +76,12 @@ class CKANExtract:
         
     def __init__(self, pkgname, doi, outfile, server):
         self.pkgname = pkgname
+        self.server = server
         self.ckanmeta = self.get_ckanmeta(pkgname)
         self.doi = doi
         self.output = {'resource': []}
         self.outfile = outfile
-        self.server = server
+
         
     def get_ckanmeta(self, pkgname):
         with ckanapi.RemoteCKAN(self.server, apikey=CKANAPIKEY) as conn:
@@ -311,29 +312,49 @@ class CKANExtract:
         # Currently only implemented:
         # + geoLocationPoint
         # + geoLocationPlace
+        # + geoLocation - MultiPoint
         #
-        # Note that CKAN notation is lon/lat, whereas DataCite is lat/lon
+        # Note that CKAN notation is lon/lat.
         #
-        # We do not use the posibility to have multiple geoLocations,
-        # because we can't distinguish them in CKAN metadata.
-        spatial = json.loads(self.ckanmeta.get('spatial'))
-        if not spatial:
-            return
-        geo_location = []
+        # Each geoLocation-feature (place, point) is one geoLocation. 
+        # The spec seems to allow to accociate, say a geoname and a point,
+        # but we can't do that in CKAN anyway, and I don't really understand
+        # the XML (xs:choice).
+        
+        geo_locations = []
+        
         geonames = self.ckanmeta.get('geographic_name')
         for nam in geonames:
-            geo_location.append({'geoLocationPlace': nam})
+            geo_locations.append(
+                {'geoLocation': [{'geoLocationPlace': nam}]}
+            )
+
+        def mk_point_location(lon, lat):
+            point_location = {
+                'geoLocation': [
+                    {'geoLocationPoint': [{'pointLongitude': str(lon)},
+                                          {'pointLatitude': str(lat)}]
+                    }]
+            }
+            return point_location
             
+        spatial = json.loads(self.ckanmeta.get('spatial'))
+        if spatial:
+            if spatial['type'] == 'Point':
+                lon = spatial['coordinates'][0]
+                lat = spatial['coordinates'][1]
+                geo_locations.append(mk_point_location(lon, lat))
+                
+            if spatial['type'] == 'MultiPoint':
+                pointlist = []
+                for point in spatial['coordinates']:
+                    lon = point[0]
+                    lat = point[1]
+                    geo_locations.append(mk_point_location(lon, lat))
+
+        if geo_locations:
+            self.output['resource'].append({'geoLocations': geo_locations})
         
-        if spatial['type'] == 'Point':
-            lon = spatial['coordinates'][0]
-            lat = spatial['coordinates'][1]
-            geo_location.append({'geoLocationPoint': [
-                {'pointLongitude': str(lon)}, {'pointLatitude': str(lat)}
-                ]})
-        if geo_location:
-            geoLocations = {'geoLocations': [{'geoLocation': geo_location}]}
-        self.output['resource'].append(geoLocations)
 
     def xs_fundingReferences(self):
         # Not implemented
