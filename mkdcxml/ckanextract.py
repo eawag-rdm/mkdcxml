@@ -11,17 +11,31 @@
 '''ckanextract
 
 Usage:
-  ckanextract [-s <hosturl>] <doi> <package_name> <outputfile>
+  ckanextract [-s <hosturl>] [--affils=<affilmap>] [--orcids=<orcids>] <doi> <package_name> <outputfile>
   ckanextract -h
 
 Options:
   --server, -s <hosturl>   The url of the CKAN instance. [default: https://data.eawag.ch] 
   --help, -h               Show this screen
+  --affils=<affilmap>      Read affiliations of authors from <affilamp>.
+                           Else, interactve input.
+  --orcids=<orcids>        Reads ORCIDs from file, else interactive input.
 
 Arguments:
   <doi>          DOI in the form "10.25678/000011"
   <package_name> The CKAN package name
   <outputfile>   The file to which the intermediate json is written
+  <affilmap>     JSON file that map author to affiliation:
+                 {
+                   "Lastname, Firstname": "affiliation",
+                    ....
+                 }
+  <orcids>       JSON file that maps authors to ORCIDs:
+                 {
+                   "Lastname, Firstname": "ORCID",
+                    ....
+                 }
+
 
 This module reads the metadata from a CKAN data package
 and generates json that in turn can be fed to mkdcxml.py in
@@ -74,15 +88,16 @@ class CKANExtract:
         ]
 
         
-    def __init__(self, pkgname, doi, outfile, server):
+    def __init__(self, pkgname, doi, outfile, server, affils, orcids):
         self.pkgname = pkgname
         self.server = server
         self.ckanmeta = self.get_ckanmeta(pkgname)
         self.doi = doi
         self.output = {'resource': []}
         self.outfile = outfile
+        self.affils = json.load(open(affils, 'r')) if affils else None
+        self.orcids = json.load(open(orcids, 'r')) if orcids else None
 
-        
     def get_ckanmeta(self, pkgname):
         with ckanapi.RemoteCKAN(self.server, apikey=CKANAPIKEY) as conn:
             meta = conn.call_action('package_show', {'id': pkgname})
@@ -120,11 +135,28 @@ class CKANExtract:
                 rest = re.sub('<(.+)>', '', rest)
             last = last.strip()
             rest = rest.strip()
-            orcid = input('Author: |{}, {}| email:|{}| : ORCID: '
-                  .format(last, rest, email))
-            eawag = input('Affiliation Eawag? [Y/n]')
-            eawag = True if eawag in ['', 'Y', 'y', '1'] else False
-            
+            fullname = '{}, {}'.format(last, rest)
+            if not self.orcids:
+                orcid = input('Author: |{}| email:|{}| : ORCID: '
+                              .format(fullname, email))
+            else:
+                try:
+                    orcid = self.orcids[fullname]
+                    print('Found ORCID {} for "{}"'.format(orcid, fullname))
+                except KeyError:
+                    orcid = None
+            if not self.affils:
+                eawag = input('Affiliation Eawag? [Y/n]')
+                eawag = True if eawag in ['', 'Y', 'y', '1'] else False
+                affiliation = DEFAULT_AFFILIATION if eawag else None
+            else:
+                try:
+                    affiliation = self.affils[fullname]
+                    print('Found affiliation "{}" for "{}"'
+                          .format(affiliation, fullname))
+                except KeyError:
+                    affiliation = None
+                    
             creator = [
                 {'creatorName': {'val': '{}, {}'.format(last, rest),
                                  "att": {"nameType": "Personal"}}},
@@ -137,9 +169,9 @@ class CKANExtract:
                                         'att': {'nameIdentifierScheme': 'ORCID',
                                                 'schemeURI': 'https://orcid.org/'}
                                         }})
-            if eawag:
+            if affiliation:
                 creator.append(
-                    {'affiliation': DEFAULT_AFFILIATION}
+                    {'affiliation': affiliation}
                 )
             creators['creators'].append({'creator': creator})
         self.output['resource'].append(creators)
@@ -371,5 +403,6 @@ if __name__ == '__main__':
     args = docopt(__doc__, argv=sys.argv[1:])
     print(args)
     C = CKANExtract(args['<package_name>'], args['<doi>'],
-                    args['<outputfile>'], args['--server'])
+                    args['<outputfile>'], args['--server'],
+                    args['--affils'], args['--orcids'])
     C.main()
