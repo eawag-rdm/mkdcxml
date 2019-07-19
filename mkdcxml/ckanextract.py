@@ -11,15 +11,18 @@
 '''ckanextract
 
 Usage:
-  ckanextract [-s <hosturl>] [--affils=<affilmap>] [--orcids=<orcids>] <doi> <package_name> <outputfile>
+  ckanextract [-s <hosturl>] [--affils=<affilmap>] [--orcids=<orcids>]
+              [--related_identifiers=<relids>] <doi> <package_name> <outputfile>
   ckanextract -h
 
 Options:
-  --server, -s <hosturl>   The url of the CKAN instance. [default: https://data.eawag.ch] 
-  --help, -h               Show this screen
-  --affils=<affilmap>      Read affiliations of authors from <affilamp>.
-                           Else, interactve input.
-  --orcids=<orcids>        Reads ORCIDs from file, else interactive input.
+  --server, -s <hosturl>           The url of the CKAN instance.
+                                   [default: https://data.eawag.ch] 
+  --help, -h                       Show this screen
+  --affils=<affilmap>              Read affiliations of authors from <affilamp>.
+                                   Else, interactve input.
+  --orcids=<orcids>                Reads ORCIDs from file, else interactive input.
+  --related_identifiers=<relids>   Reads related identifiers from file.
 
 Arguments:
   <doi>          DOI in the form "10.25678/000011"
@@ -35,6 +38,19 @@ Arguments:
                    "Lastname, Firstname": "ORCID",
                     ....
                  }
+  <relids>       JSON file with related idetifiers:
+                 [
+                   {"relatedIdentifier":
+                     {"val": "e.g. a DOI",
+                      "att": {
+                               "resourceTypeGeneral": "TEXT",
+                               "relatedIdentifierType": "DOI",
+	                       "relationType": "Cites"
+                             }
+                     }
+                   },
+                   ....
+                 ]  
 
 
 This module reads the metadata from a CKAN data package
@@ -88,7 +104,7 @@ class CKANExtract:
         ]
 
         
-    def __init__(self, pkgname, doi, outfile, server, affils, orcids):
+    def __init__(self, pkgname, doi, outfile, server, affils, orcids, relids):
         self.pkgname = pkgname
         self.server = server
         self.ckanmeta = self.get_ckanmeta(pkgname)
@@ -97,6 +113,8 @@ class CKANExtract:
         self.outfile = outfile
         self.affils = json.load(open(affils, 'r')) if affils else None
         self.orcids = json.load(open(orcids, 'r')) if orcids else None
+        self.related_identifiers_from_file = (json.load(open(relids, 'r'))
+                                              if relids else None)
 
     def get_ckanmeta(self, pkgname):
         with ckanapi.RemoteCKAN(self.server, apikey=CKANAPIKEY) as conn:
@@ -289,9 +307,15 @@ class CKANExtract:
                       'att': {'resourceTypeGeneral': d[2],
                               'relatedIdentifierType': rel_id_type,
                               'relationType': rt}}} for rt in rel_types]
+                
+        if self.related_identifiers_from_file:
+            relatedIdentifiers += self.related_identifiers_from_file
+                    
         if relatedIdentifiers:
             self.output['resource'].append({'relatedIdentifiers':
                                             relatedIdentifiers})
+        
+            
             
     def xs_sizes(self):
         # Not implemented
@@ -404,5 +428,6 @@ if __name__ == '__main__':
     print(args)
     C = CKANExtract(args['<package_name>'], args['<doi>'],
                     args['<outputfile>'], args['--server'],
-                    args['--affils'], args['--orcids'])
+                    args['--affils'], args['--orcids'],
+                    args['--related_identifiers'])
     C.main()
