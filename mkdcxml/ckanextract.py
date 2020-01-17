@@ -164,7 +164,7 @@ class CKANExtract:
                 except KeyError:
                     orcid = None
             if not self.affils:
-                eawag = input('Affiliation Eawag? [Y/n]')
+                eawag = input('{}: Affiliation Eawag? [Y/n]'.format(fullname))
                 eawag = True if eawag in ['', 'Y', 'y', '1'] else False
                 affiliation = DEFAULT_AFFILIATION if eawag else None
             else:
