@@ -3,8 +3,8 @@
 ''' This module reads a json-file which contains the metadata of an
 item to be published and returns a XML representation thereof.
 
-Currently the application is DOI-minting and the DataCite metadata-schema v4.1
-(https://schema.datacite.org/meta/kernel-4.1/metadata.xsd) is returned. (This
+Currently the application is DOI-minting and the DataCite metadata-schema v4.4
+(https://schema.datacite.org/meta/kernel-4.4/metadata.xsd) is returned. (This
 of course only happens if the input-metadata is DataCite compatible.)
 
 The item's metadata in json is represented with regard to the XML nodes of
@@ -49,7 +49,7 @@ class MetaDataWriter:
 
     
     
-    def __init__(self, metafile, typ='datacite4.1'):
+    def __init__(self, metafile, typ='datacite4.4'):
         self.E = ElementMaker(nsmap={None: "http://datacite.org/schema/kernel-4"})
         self.typ = typ
         self.schema = self._mk_schema(self.typ)
@@ -85,7 +85,7 @@ class MetaDataWriter:
             print(xml.decode('utf-8'))
             
     def _mk_attribute_map(self, typ):
-        if typ == 'datacite4.1':
+        if typ == 'datacite4.4':
             return {
                 'lang': '{http://www.w3.org/XML/1998/namespace}lang',
             }
@@ -93,20 +93,20 @@ class MetaDataWriter:
             return {}
 
     def _mk_attribute_defaults(self, typ):
-        if typ == 'datacite4.1':
+        if typ == 'datacite4.4':
             return {
                 'resource': {
                     '{http://www.w3.org/2001/XMLSchema-instance}schemaLocation':
                     'http://datacite.org/schema/kernel-4 '
-                    'http://schema.datacite.org/meta/kernel-4.1/metadata.xsd'
+                    'http://schema.datacite.org/meta/kernel-4.4/metadata.xsd'
                 }
             }
         else:
             return {}
 
     def _mk_schema(self, typ):
-        if typ == 'datacite4.1':
-            schemadef = pkg_resources.resource_stream(__name__, 'schema/datacite/metadata_schema_4.1.xsd')
+        if typ == 'datacite4.4':
+            schemadef = pkg_resources.resource_stream(__name__, 'schema/datacite/metadata_schema_4.4.xsd')
             return ET.XMLSchema(
                 ET.parse(schemadef)
             )
