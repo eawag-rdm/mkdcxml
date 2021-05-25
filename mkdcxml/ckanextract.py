@@ -60,7 +60,7 @@ the metadata and metadata-representation in CKAN, which is modified
 by plugins and (in our case) very much in flux.
 
 Currently this module covers a subset of the
-DataCite Metadata Schema 4.1 (https://schema.datacite.org/meta/kernel-4.1)
+DataCite Metadata Schema 4.4 (https://schema.datacite.org/meta/kernel-4.4)
 
 '''
 
